@@ -5,14 +5,6 @@ import ScreenCaptureKit
 struct IndigoApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    init() {
-        // Redirect stdout/stderr to a log file for debugging
-        let logPath = NSHomeDirectory() + "/Documents/indigo.log"
-        freopen(logPath, "w", stdout)
-        freopen(logPath, "a", stderr)
-        print("Indigo started at \(Date())")
-    }
-
     var body: some Scene {
         WindowGroup {
             ContentView(outputManager: appDelegate.outputManager)
@@ -25,10 +17,9 @@ struct IndigoApp: App {
     private func requestScreenCapturePermission() {
         Task {
             do {
-                // This triggers the permission prompt if not already granted
                 _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
             } catch {
-                print("Screen recording permission needed: \(error.localizedDescription)")
+                NSLog("Screen recording permission needed: %@", error.localizedDescription)
             }
         }
     }
@@ -37,8 +28,16 @@ struct IndigoApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     let outputManager = OutputManager()
 
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Ensure the app activates properly when launched from terminal
+        NSApplication.shared.activate(ignoringOtherApps: true)
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return true
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
-        // Synchronous cleanup — stop outputs immediately
         outputManager.syphonOutput.stop()
         outputManager.ndiOutput.stop()
     }
