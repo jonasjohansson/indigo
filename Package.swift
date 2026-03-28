@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "InNDIGo",
+    name: "Indigo",
     platforms: [
         .macOS(.v13)
     ],
@@ -37,10 +37,10 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "InNDIGo",
+            name: "Indigo",
             dependencies: ["CSyphon", "CNDI"],
-            path: "Sources/InNDIGo",
-            exclude: ["Info.plist", "InNDIGo.entitlements"]
+            path: "Sources/Indigo",
+            exclude: ["Info.plist", "Indigo.entitlements"]
         )
     ]
 )

@@ -28,10 +28,10 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
         streamCapture.captureAudio = settings.audioEnabled
 
         if settings.syphonEnabled {
-            syphonOutput.start(name: "InNDIGo")
+            syphonOutput.start(name: "Indigo")
         }
         if settings.ndiEnabled {
-            ndiOutput.start(name: "InNDIGo")
+            ndiOutput.start(name: "Indigo")
         }
 
         do {

@@ -2,7 +2,7 @@ import SwiftUI
 import ScreenCaptureKit
 
 @main
-struct InNDIGoApp: App {
+struct IndigoApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
