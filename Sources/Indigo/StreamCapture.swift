@@ -7,7 +7,7 @@ protocol StreamCaptureDelegate: AnyObject {
     func streamCapture(_ capture: StreamCapture, didOutputAudioSampleBuffer sampleBuffer: CMSampleBuffer)
 }
 
-final class StreamCapture: NSObject, SCStreamOutput {
+final class StreamCapture: NSObject, SCStreamOutput, SCStreamDelegate {
     weak var delegate: StreamCaptureDelegate?
 
     private var stream: SCStream?
@@ -17,15 +17,15 @@ final class StreamCapture: NSObject, SCStreamOutput {
     var captureFPS: Int = 60
     var captureAudio: Bool = true
 
-    /// Start capturing a specific window (the offscreen capture window)
     func startCapture(windowID: CGWindowID) async throws {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
 
-        guard let window = content.windows.first(where: {
-            $0.windowID == windowID
-        }) else {
+        guard let window = content.windows.first(where: { $0.windowID == windowID }) else {
+            NSLog("StreamCapture: window %d not found among %d windows", windowID, content.windows.count)
             throw CaptureError.windowNotFound
         }
+
+        NSLog("StreamCapture: capturing window [%d] '%@' at %@", window.windowID, window.title ?? "", NSStringFromRect(window.frame))
 
         let filter = SCContentFilter(desktopIndependentWindow: window)
 
@@ -39,7 +39,7 @@ final class StreamCapture: NSObject, SCStreamOutput {
         config.sampleRate = 48000
         config.channelCount = 2
 
-        let stream = SCStream(filter: filter, configuration: config, delegate: nil)
+        let stream = SCStream(filter: filter, configuration: config, delegate: self)
 
         try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: .global(qos: .userInteractive))
         if captureAudio {
@@ -48,6 +48,7 @@ final class StreamCapture: NSObject, SCStreamOutput {
 
         try await stream.startCapture()
         self.stream = stream
+        NSLog("StreamCapture: started OK (%dx%d @ %dfps)", captureWidth, captureHeight, captureFPS)
     }
 
     func stopCapture() async throws {
@@ -59,7 +60,6 @@ final class StreamCapture: NSObject, SCStreamOutput {
 
     func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
         guard sampleBuffer.isValid else { return }
-
         switch type {
         case .screen:
             delegate?.streamCapture(self, didOutputVideoSampleBuffer: sampleBuffer)
@@ -70,14 +70,16 @@ final class StreamCapture: NSObject, SCStreamOutput {
         }
     }
 
+    // MARK: - SCStreamDelegate
+
+    func stream(_ stream: SCStream, didStopWithError error: Error) {
+        NSLog("StreamCapture: stopped with error: %@", error.localizedDescription)
+    }
+
     enum CaptureError: Error, LocalizedError {
         case windowNotFound
-
         var errorDescription: String? {
-            switch self {
-            case .windowNotFound:
-                return "Could not find the capture window. Make sure screen recording permission is granted."
-            }
+            "Could not find capture window. Make sure screen recording permission is granted."
         }
     }
 }

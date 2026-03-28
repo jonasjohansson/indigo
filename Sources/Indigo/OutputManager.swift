@@ -10,6 +10,7 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
 
     private let device: MTLDevice
     private var captureWindow: CaptureWindow?
+    private var frameCount = 0
 
     @Published var isCapturing = false
     @Published var error: String?
@@ -29,6 +30,7 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
         streamCapture.captureFPS = settings.fps
         streamCapture.captureAudio = settings.audioEnabled
 
+        // Create the capture window on the main thread
         let cw = await MainActor.run {
             let cw = CaptureWindow(
                 width: settings.width,
@@ -47,16 +49,19 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
             ndiOutput.start(name: "Indigo")
         }
 
-        try? await Task.sleep(nanoseconds: 500_000_000)
+        // Give the window time to appear in the window server
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
 
         do {
             let windowID = await MainActor.run { CGWindowID(cw.window.windowNumber) }
+            NSLog("OutputManager: starting capture of window %d", windowID)
             try await streamCapture.startCapture(windowID: windowID)
             await MainActor.run {
                 isCapturing = true
                 error = nil
             }
         } catch {
+            NSLog("OutputManager: capture failed: %@", error.localizedDescription)
             await MainActor.run {
                 self.error = error.localizedDescription
                 isCapturing = false
@@ -72,10 +77,11 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
         do {
             try await streamCapture.stopCapture()
         } catch {
-            print("Error stopping capture: \(error)")
+            NSLog("OutputManager: error stopping: %@", error.localizedDescription)
         }
         syphonOutput.stop()
         ndiOutput.stop()
+        frameCount = 0
 
         await MainActor.run {
             captureWindow?.close()
@@ -96,6 +102,10 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
     // MARK: - StreamCaptureDelegate
 
     func streamCapture(_ capture: StreamCapture, didOutputVideoSampleBuffer sampleBuffer: CMSampleBuffer) {
+        frameCount += 1
+        if frameCount <= 3 || frameCount % 300 == 0 {
+            NSLog("OutputManager: video frame #%d", frameCount)
+        }
         syphonOutput.publishFrame(from: sampleBuffer)
         ndiOutput.sendVideoFrame(from: sampleBuffer)
     }

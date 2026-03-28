@@ -34,16 +34,18 @@ final class CaptureWindow: NSObject, WKNavigationDelegate {
         self.customCSS = customCSS
 
         window = NSWindow(
-            contentRect: NSRect(x: -10000, y: -10000, width: width, height: height),
-            styleMask: .borderless,
+            contentRect: NSRect(x: 20, y: 20, width: width, height: height),
+            styleMask: [.titled, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.contentView = webView
         window.isReleasedWhenClosed = false
-        window.title = "Indigo Capture"
+        window.title = "Indigo Capture (\(width)x\(height))"
         window.backgroundColor = .black
-        window.orderBack(nil)
+        // Show the window — it must be on-screen and composited for
+        // ScreenCaptureKit to capture it. User can minimize or move it.
+        window.orderFront(nil)
 
         super.init()
         webView.navigationDelegate = self
