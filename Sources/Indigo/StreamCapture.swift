@@ -17,15 +17,18 @@ final class StreamCapture: NSObject, SCStreamOutput, SCStreamDelegate {
     var captureFPS: Int = 60
     var captureAudio: Bool = true
 
-    func startCapture(windowID: CGWindowID) async throws {
-        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+    func startCapture() async throws {
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
 
-        guard let window = content.windows.first(where: { $0.windowID == windowID }) else {
-            NSLog("StreamCapture: window %d not found among %d windows", windowID, content.windows.count)
+        let pid = ProcessInfo.processInfo.processIdentifier
+        guard let window = content.windows
+            .filter({ $0.owningApplication?.processID == pid && $0.isOnScreen })
+            .max(by: { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height })
+        else {
             throw CaptureError.windowNotFound
         }
 
-        NSLog("StreamCapture: capturing window [%d] '%@' at %@", window.windowID, window.title ?? "", NSStringFromRect(window.frame))
+        NSLog("StreamCapture: capturing [%d] '%@'", window.windowID, window.title ?? "")
 
         let filter = SCContentFilter(desktopIndependentWindow: window)
 
@@ -48,7 +51,7 @@ final class StreamCapture: NSObject, SCStreamOutput, SCStreamDelegate {
 
         try await stream.startCapture()
         self.stream = stream
-        NSLog("StreamCapture: started OK (%dx%d @ %dfps)", captureWidth, captureHeight, captureFPS)
+        NSLog("StreamCapture: started OK")
     }
 
     func stopCapture() async throws {
@@ -70,16 +73,14 @@ final class StreamCapture: NSObject, SCStreamOutput, SCStreamDelegate {
         }
     }
 
-    // MARK: - SCStreamDelegate
-
     func stream(_ stream: SCStream, didStopWithError error: Error) {
-        NSLog("StreamCapture: stopped with error: %@", error.localizedDescription)
+        NSLog("StreamCapture: error: %@", error.localizedDescription)
     }
 
     enum CaptureError: Error, LocalizedError {
         case windowNotFound
         var errorDescription: String? {
-            "Could not find capture window. Make sure screen recording permission is granted."
+            "Could not find app window. Grant screen recording permission in System Settings."
         }
     }
 }

@@ -12,24 +12,15 @@ struct ContentView: View {
         VStack(spacing: 0) {
             // Navigation bar
             HStack(spacing: 8) {
-                Button(action: {
-                    webViewStore.goBack()
-                    outputManager.captureGoBack()
-                }) {
+                Button(action: { webViewStore.goBack() }) {
                     Image(systemName: "chevron.left")
                 }
 
-                Button(action: {
-                    webViewStore.goForward()
-                    outputManager.captureGoForward()
-                }) {
+                Button(action: { webViewStore.goForward() }) {
                     Image(systemName: "chevron.right")
                 }
 
-                Button(action: {
-                    webViewStore.reload()
-                    outputManager.captureReload()
-                }) {
+                Button(action: { webViewStore.reload() }) {
                     Image(systemName: "arrow.clockwise")
                 }
 
@@ -41,7 +32,6 @@ struct ContentView: View {
                     }
                     settings.url = trimmed
                     webViewStore.loadURL(trimmed)
-                    outputManager.updateCaptureURL(trimmed)
                 }
 
                 Button(action: { showSettings.toggle() }) {
@@ -59,20 +49,24 @@ struct ContentView: View {
                         TextField("Width", value: $settings.width, format: .number)
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 80)
+                            .disabled(outputManager.isCapturing)
 
                         Text("Height")
                             .frame(width: 50, alignment: .trailing)
                         TextField("Height", value: $settings.height, format: .number)
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 80)
+                            .disabled(outputManager.isCapturing)
 
-                        // Quick presets
                         Button("720p") { settings.width = 1280; settings.height = 720 }
                             .buttonStyle(.bordered)
+                            .disabled(outputManager.isCapturing)
                         Button("1080p") { settings.width = 1920; settings.height = 1080 }
                             .buttonStyle(.bordered)
+                            .disabled(outputManager.isCapturing)
                         Button("4K") { settings.width = 3840; settings.height = 2160 }
                             .buttonStyle(.bordered)
+                            .disabled(outputManager.isCapturing)
 
                         Spacer()
                     }
@@ -86,7 +80,6 @@ struct ContentView: View {
 
                         Button("Refresh Cache") {
                             webViewStore.refreshCache()
-                            outputManager.captureRefreshCache()
                         }
                         .buttonStyle(.bordered)
                     }
@@ -97,7 +90,7 @@ struct ContentView: View {
                 Divider()
             }
 
-            // Web view (preview)
+            // Web view
             WebRendererView(store: webViewStore, url: settings.url)
 
             Divider()
