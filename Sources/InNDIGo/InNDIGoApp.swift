@@ -2,7 +2,7 @@ import SwiftUI
 import ScreenCaptureKit
 
 @main
-struct WebSourceApp: App {
+struct InNDIGoApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {

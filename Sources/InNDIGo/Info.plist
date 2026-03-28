@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
     <key>NSScreenCaptureUsageDescription</key>
-    <string>WebSource needs screen recording to capture web content</string>
+    <string>InNDIGo needs screen recording to capture web content</string>
     <key>NSLocalNetworkUsageDescription</key>
-    <string>WebSource uses NDI to send video over the network</string>
+    <string>InNDIGo uses NDI to send video over the network</string>
     <key>NSBonjourServices</key>
     <array>
         <string>_ndi._tcp</string>

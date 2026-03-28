@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "WebSource",
+    name: "InNDIGo",
     platforms: [
         .macOS(.v13)
     ],
@@ -37,10 +37,10 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "WebSource",
+            name: "InNDIGo",
             dependencies: ["CSyphon", "CNDI"],
-            path: "Sources/WebSource",
-            exclude: ["Info.plist", "WebSource.entitlements"]
+            path: "Sources/InNDIGo",
+            exclude: ["Info.plist", "InNDIGo.entitlements"]
         )
     ]
 )
