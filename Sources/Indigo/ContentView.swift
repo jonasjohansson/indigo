@@ -32,6 +32,7 @@ struct ContentView: View {
                             urlInput = trimmed
                         }
                         settings.url = trimmed
+                        webViewStore.loadURL(trimmed)
                     }
             }
             .padding(8)
