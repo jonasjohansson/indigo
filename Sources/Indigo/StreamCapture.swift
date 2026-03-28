@@ -34,12 +34,18 @@ final class StreamCapture: NSObject, SCStreamOutput, SCStreamDelegate {
             throw CaptureError.windowNotFound
         }
 
-        NSLog("StreamCapture: window [%d] frame=%@", window.windowID, NSStringFromRect(window.frame))
+        NSLog("StreamCapture: window [%d] frame=%@, app=%@", window.windowID, NSStringFromRect(window.frame), app.applicationName)
 
-        // Use application filter with only the main window included.
-        // This captures audio from child processes (WKWebView's WebContent process)
-        // while still scoping video to just our window.
-        let filter = SCContentFilter(desktopIndependentWindow: window)
+        // Use display filter excluding everything except our app.
+        // This captures audio from child processes (WKWebView's WebContent).
+        // desktopIndependentWindow does NOT capture child process audio.
+        guard let display = content.displays.first else {
+            throw CaptureError.windowNotFound
+        }
+
+        // Exclude all apps except ours
+        let otherApps = content.applications.filter { $0.processID != pid }
+        let filter = SCContentFilter(display: display, excludingApplications: otherApps, exceptingWindows: [])
 
         let config = SCStreamConfiguration()
         config.width = captureWidth

@@ -28,6 +28,8 @@
     <array>
         <string>_ndi._tcp</string>
     </array>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
 </dict>
