@@ -16,6 +16,11 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 # Copy binary
 cp "$BUILD_DIR/$APP_NAME" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
+# Copy app icon
+if [ -f "AppIcon.icns" ]; then
+    cp AppIcon.icns "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+fi
+
 # Copy NDI dylib into bundle
 if [ -f "/Library/NDI SDK for Apple/lib/macOS/libndi.dylib" ]; then
     mkdir -p "$APP_BUNDLE/Contents/Frameworks"
@@ -56,6 +61,8 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << 'PLIST'
     <array>
         <string>_ndi._tcp</string>
     </array>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
 </dict>
