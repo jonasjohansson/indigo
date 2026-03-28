@@ -16,13 +16,17 @@ final class StreamCapture: NSObject, SCStreamOutput, SCStreamDelegate {
     var captureHeight: Int = 1080
     var captureFPS: Int = 60
     var captureAudio: Bool = true
-    /// Region of the window to capture (in window coordinates). If zero, captures entire window.
     var sourceRect: CGRect = .zero
 
     func startCapture() async throws {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
 
         let pid = ProcessInfo.processInfo.processIdentifier
+
+        guard let app = content.applications.first(where: { $0.processID == pid }) else {
+            throw CaptureError.windowNotFound
+        }
+
         guard let window = content.windows
             .filter({ $0.owningApplication?.processID == pid && $0.isOnScreen })
             .max(by: { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height })
@@ -32,6 +36,9 @@ final class StreamCapture: NSObject, SCStreamOutput, SCStreamDelegate {
 
         NSLog("StreamCapture: window [%d] frame=%@", window.windowID, NSStringFromRect(window.frame))
 
+        // Use application filter with only the main window included.
+        // This captures audio from child processes (WKWebView's WebContent process)
+        // while still scoping video to just our window.
         let filter = SCContentFilter(desktopIndependentWindow: window)
 
         let config = SCStreamConfiguration()
@@ -44,7 +51,6 @@ final class StreamCapture: NSObject, SCStreamOutput, SCStreamDelegate {
         config.sampleRate = 48000
         config.channelCount = 2
 
-        // Crop to just the web view area if sourceRect is set
         if sourceRect != .zero {
             config.sourceRect = sourceRect
             config.destinationRect = CGRect(x: 0, y: 0, width: captureWidth, height: captureHeight)
@@ -61,15 +67,13 @@ final class StreamCapture: NSObject, SCStreamOutput, SCStreamDelegate {
 
         try await stream.startCapture()
         self.stream = stream
-        NSLog("StreamCapture: started OK (%dx%d @ %dfps)", captureWidth, captureHeight, captureFPS)
+        NSLog("StreamCapture: started OK (%dx%d @ %dfps, audio=%d)", captureWidth, captureHeight, captureFPS, captureAudio ? 1 : 0)
     }
 
     func stopCapture() async throws {
         try await stream?.stopCapture()
         stream = nil
     }
-
-    // MARK: - SCStreamOutput
 
     func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
         guard sampleBuffer.isValid else { return }

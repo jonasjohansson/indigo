@@ -6,6 +6,7 @@ final class NDIOutput {
     // NDI sender instance.
     private var sender: NDIlib_send_instance_t?
     private var isRunning = false
+    private var audioFrameCount = 0
 
     func start(name: String) {
         guard NDIlib_initialize() else {
@@ -38,7 +39,8 @@ final class NDIOutput {
         sender = nil
         NDIlib_destroy()
         isRunning = false
-        print("NDI: stopped")
+        audioFrameCount = 0
+        NSLog("NDI: stopped")
     }
 
     func sendVideoFrame(from sampleBuffer: CMSampleBuffer) {
@@ -106,5 +108,19 @@ final class NDIOutput {
         audioFrame.p_metadata = nil
         audioFrame.timestamp = 0
         NDIlib_send_send_audio_v2(sender, &audioFrame)
+
+        audioFrameCount += 1
+        // Compute RMS level to check if there's actual audio content
+        var rms: Float = 0
+        for i in 0..<(sampleCount * channelCount) {
+            rms += planarBuffer[i] * planarBuffer[i]
+        }
+        rms = sqrt(rms / Float(sampleCount * channelCount))
+
+        if audioFrameCount <= 3 || audioFrameCount % 200 == 0 {
+            NSLog("NDI audio: frame #%d, %d ch, %d samples, %.0f Hz, RMS=%.6f %@",
+                  audioFrameCount, channelCount, sampleCount, asbd.mSampleRate, rms,
+                  rms > 0.001 ? "🔊" : "🔇")
+        }
     }
 }
