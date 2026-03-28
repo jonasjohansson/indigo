@@ -11,12 +11,17 @@ struct WebRendererView: NSViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         onWebViewReady(webView)
+        if let url = URL(string: url) {
+            webView.load(URLRequest(url: url))
+        }
+        context.coordinator.lastLoadedURL = url
         return webView
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
         guard let url = URL(string: url) else { return }
-        if webView.url?.absoluteString != self.url {
+        if context.coordinator.lastLoadedURL != self.url {
+            context.coordinator.lastLoadedURL = self.url
             webView.load(URLRequest(url: url))
         }
     }
@@ -24,6 +29,8 @@ struct WebRendererView: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     class Coordinator: NSObject, WKNavigationDelegate {
+        var lastLoadedURL: String?
+
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
             print("WebView navigation failed: \(error.localizedDescription)")
         }

@@ -52,18 +52,25 @@
         // Load the vertex/shader function from the library
         id <MTLFunction> vertexFunction = [defaultLibrary newFunctionWithName:@"textureToScreenVertexShader"];
         id <MTLFunction> fragmentFunction = [defaultLibrary newFunctionWithName:@"textureToScreenSamplingShader"];
-        
-        
+
+        // If shaders are unavailable (e.g. SPM build without .metallib), return nil.
+        // The caller (SyphonMetalServer) handles a nil renderer by using the fast blit path.
+        if( !vertexFunction || !fragmentFunction )
+        {
+            SYPHONLOG(@"Metal shader functions not available, renderer disabled");
+            return nil;
+        }
+
         // Set up a descriptor for creating a pipeline state object
         MTLRenderPipelineDescriptor *pipelineStateDescriptor = [MTLRenderPipelineDescriptor new];
         pipelineStateDescriptor.label = @"Syphon Pipeline";
         pipelineStateDescriptor.vertexFunction = vertexFunction;
         pipelineStateDescriptor.fragmentFunction = fragmentFunction;
         pipelineStateDescriptor.colorAttachments[0].pixelFormat = colorPixelFormat;
-        
+
         _pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineStateDescriptor error:&error];
-        
-        
+
+
         if( !_pipelineState )
         {
             SYPHONLOG(@"Failed to createe pipeline state, error %@", error);
