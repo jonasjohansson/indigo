@@ -15,8 +15,8 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
     @Published var isCapturing = false
     @Published var error: String?
 
-    /// The web view's frame in global (screen) coordinates, set by ContentView
-    var webViewFrame: CGRect = .zero
+    /// Set by ContentView — the WKWebView reference for getting its frame
+    weak var webViewStore: WebViewStore?
 
     init() {
         guard let device = MTLCreateSystemDefaultDevice() else {
@@ -36,32 +36,30 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
         streamCapture.captureFPS = settings.fps
         streamCapture.captureAudio = settings.audioEnabled
 
-        // Convert the web view's screen frame to window-local coordinates for sourceRect
-        if let window = await MainActor.run(body: { NSApp.mainWindow }) {
-            let windowFrame = window.frame
-            let contentFrame = window.contentLayoutRect
-            let titleBarHeight = windowFrame.height - contentFrame.height
+        // Get the web view's rect within the window (in points)
+        let rect = await MainActor.run { () -> CGRect in
+            guard let webView = webViewStore?.webView,
+                  let window = webView.window else { return .zero }
 
-            // webViewFrame is in global (screen) coords from GeometryReader
-            // Convert to window-local coords (origin at top-left of window content area)
-            let screenFrame = await MainActor.run { self.webViewFrame }
+            // Convert web view bounds to window coordinates
+            let rectInWindow = webView.convert(webView.bounds, to: nil)
+            // ScreenCaptureKit sourceRect uses top-left origin
+            let windowHeight = window.frame.height
+            let topLeftRect = CGRect(
+                x: rectInWindow.origin.x,
+                y: windowHeight - rectInWindow.origin.y - rectInWindow.height,
+                width: rectInWindow.width,
+                height: rectInWindow.height
+            )
+            NSLog("OutputManager: webView bounds=%@, inWindow=%@, sourceRect=%@",
+                  NSStringFromRect(webView.bounds),
+                  NSStringFromRect(rectInWindow),
+                  NSStringFromRect(topLeftRect))
+            return topLeftRect
+        }
 
-            if screenFrame != .zero {
-                // ScreenCaptureKit uses top-left origin within the window
-                let localX = screenFrame.origin.x - windowFrame.origin.x
-                // Screen coords: bottom-left origin. Window content: below title bar.
-                let localY = (windowFrame.origin.y + windowFrame.height) - (screenFrame.origin.y + screenFrame.height)
-
-                let scaleFactor = await MainActor.run { window.backingScaleFactor }
-                let rect = CGRect(
-                    x: localX * scaleFactor,
-                    y: localY * scaleFactor,
-                    width: screenFrame.width * scaleFactor,
-                    height: screenFrame.height * scaleFactor
-                )
-                streamCapture.sourceRect = rect
-                NSLog("OutputManager: webView sourceRect=%@", NSStringFromRect(rect))
-            }
+        if rect != .zero {
+            streamCapture.sourceRect = rect
         }
 
         if settings.syphonEnabled {

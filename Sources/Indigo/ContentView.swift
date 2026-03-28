@@ -1,13 +1,6 @@
 import SwiftUI
 import WebKit
 
-struct WebViewFrameKey: PreferenceKey {
-    static var defaultValue: CGRect = .zero
-    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
-        value = nextValue()
-    }
-}
-
 struct ContentView: View {
     @StateObject private var settings = AppSettings()
     @StateObject private var webViewStore = WebViewStore()
@@ -99,12 +92,8 @@ struct ContentView: View {
 
             // Web view
             WebRendererView(store: webViewStore, url: settings.url)
-                .background(GeometryReader { geo in
-                    Color.clear.preference(key: WebViewFrameKey.self,
-                        value: geo.frame(in: .global))
-                })
-                .onPreferenceChange(WebViewFrameKey.self) { frame in
-                    outputManager.webViewFrame = frame
+                .onAppear {
+                    outputManager.webViewStore = webViewStore
                 }
 
             Divider()
@@ -118,7 +107,7 @@ struct ContentView: View {
                 .labelsHidden()
                 .frame(width: 90)
 
-                Text("\(settings.width)x\(settings.height)")
+                Text(String(format: "%dx%d", settings.width, settings.height))
                     .font(.system(.body, design: .monospaced))
                     .foregroundColor(.secondary)
 
