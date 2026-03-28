@@ -1,6 +1,7 @@
 import Metal
 import CoreMedia
 import ScreenCaptureKit
+import AppKit
 
 final class OutputManager: ObservableObject, StreamCaptureDelegate {
     let streamCapture = StreamCapture()
@@ -8,6 +9,7 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
     let ndiOutput = NDIOutput()
 
     private let device: MTLDevice
+    private var captureWindow: CaptureWindow?
 
     @Published var isCapturing = false
     @Published var error: String?
@@ -21,11 +23,19 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
         streamCapture.delegate = self
     }
 
-    func startCapture(settings: AppSettings) async {
+    func startCapture(settings: AppSettings, currentURL: String) async {
         streamCapture.captureWidth = settings.resolution.width
         streamCapture.captureHeight = settings.resolution.height
         streamCapture.captureFPS = settings.fps
         streamCapture.captureAudio = settings.audioEnabled
+
+        // Create offscreen capture window at target resolution
+        let cw = await MainActor.run {
+            let cw = CaptureWindow(width: settings.resolution.width, height: settings.resolution.height)
+            cw.loadURL(currentURL)
+            return cw
+        }
+        self.captureWindow = cw
 
         if settings.syphonEnabled {
             syphonOutput.start(name: "Indigo")
@@ -34,8 +44,12 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
             ndiOutput.start(name: "Indigo")
         }
 
+        // Small delay to let the window appear in the window server
+        try? await Task.sleep(nanoseconds: 500_000_000)
+
         do {
-            try await streamCapture.startCapture()
+            let windowID = await MainActor.run { CGWindowID(cw.window.windowNumber) }
+            try await streamCapture.startCapture(windowID: windowID)
             await MainActor.run {
                 isCapturing = true
                 error = nil
@@ -47,6 +61,8 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
             }
             syphonOutput.stop()
             ndiOutput.stop()
+            await MainActor.run { cw.close() }
+            self.captureWindow = nil
         }
     }
 
@@ -60,9 +76,21 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
         ndiOutput.stop()
 
         await MainActor.run {
+            captureWindow?.close()
+            captureWindow = nil
             isCapturing = false
         }
     }
+
+    /// Forward URL changes to the capture window
+    func updateCaptureURL(_ url: String) {
+        captureWindow?.loadURL(url)
+    }
+
+    /// Forward navigation to the capture window
+    func captureGoBack() { captureWindow?.goBack() }
+    func captureGoForward() { captureWindow?.goForward() }
+    func captureReload() { captureWindow?.reload() }
 
     // MARK: - StreamCaptureDelegate
 

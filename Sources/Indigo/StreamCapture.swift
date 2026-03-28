@@ -17,12 +17,12 @@ final class StreamCapture: NSObject, SCStreamOutput {
     var captureFPS: Int = 60
     var captureAudio: Bool = true
 
-    func startCapture() async throws {
-        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+    /// Start capturing a specific window (the offscreen capture window)
+    func startCapture(windowID: CGWindowID) async throws {
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
 
-        let pid = ProcessInfo.processInfo.processIdentifier
         guard let window = content.windows.first(where: {
-            $0.owningApplication?.processID == pid
+            $0.windowID == windowID
         }) else {
             throw CaptureError.windowNotFound
         }
@@ -76,7 +76,7 @@ final class StreamCapture: NSObject, SCStreamOutput {
         var errorDescription: String? {
             switch self {
             case .windowNotFound:
-                return "Could not find the app window to capture"
+                return "Could not find the capture window. Make sure screen recording permission is granted."
             }
         }
     }

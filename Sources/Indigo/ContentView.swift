@@ -11,15 +11,24 @@ struct ContentView: View {
         VStack(spacing: 0) {
             // Navigation bar
             HStack(spacing: 8) {
-                Button(action: { webViewStore.goBack() }) {
+                Button(action: {
+                    webViewStore.goBack()
+                    outputManager.captureGoBack()
+                }) {
                     Image(systemName: "chevron.left")
                 }
 
-                Button(action: { webViewStore.goForward() }) {
+                Button(action: {
+                    webViewStore.goForward()
+                    outputManager.captureGoForward()
+                }) {
                     Image(systemName: "chevron.right")
                 }
 
-                Button(action: { webViewStore.reload() }) {
+                Button(action: {
+                    webViewStore.reload()
+                    outputManager.captureReload()
+                }) {
                     Image(systemName: "arrow.clockwise")
                 }
 
@@ -31,11 +40,12 @@ struct ContentView: View {
                     }
                     settings.url = trimmed
                     webViewStore.loadURL(trimmed)
+                    outputManager.updateCaptureURL(trimmed)
                 }
             }
             .padding(8)
 
-            // Web view
+            // Web view (preview in main window)
             WebRendererView(store: webViewStore, url: settings.url)
 
             Divider()
@@ -78,7 +88,7 @@ struct ContentView: View {
                         if outputManager.isCapturing {
                             await outputManager.stopCapture()
                         } else {
-                            await outputManager.startCapture(settings: settings)
+                            await outputManager.startCapture(settings: settings, currentURL: settings.url)
                         }
                     }
                 }
