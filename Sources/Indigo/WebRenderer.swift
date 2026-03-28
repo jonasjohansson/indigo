@@ -12,6 +12,14 @@ class WebViewStore: ObservableObject {
     func goBack() { webView?.goBack() }
     func goForward() { webView?.goForward() }
     func reload() { webView?.reload() }
+
+    func refreshCache() {
+        guard let webView = webView, let url = webView.url else { return }
+        let dataStore = WKWebsiteDataStore.default()
+        dataStore.removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast) {
+            webView.load(URLRequest(url: url))
+        }
+    }
 }
 
 struct WebRendererView: NSViewRepresentable {

@@ -6,6 +6,7 @@ struct ContentView: View {
     @StateObject private var webViewStore = WebViewStore()
     @ObservedObject var outputManager: OutputManager
     @State private var urlInput: String = ""
+    @State private var showSettings = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -42,30 +43,77 @@ struct ContentView: View {
                     webViewStore.loadURL(trimmed)
                     outputManager.updateCaptureURL(trimmed)
                 }
+
+                Button(action: { showSettings.toggle() }) {
+                    Image(systemName: "gearshape")
+                }
             }
             .padding(8)
 
-            // Web view (preview in main window)
+            // Settings panel (collapsible)
+            if showSettings {
+                VStack(spacing: 8) {
+                    HStack(spacing: 12) {
+                        Text("Width")
+                            .frame(width: 50, alignment: .trailing)
+                        TextField("Width", value: $settings.width, format: .number)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 80)
+
+                        Text("Height")
+                            .frame(width: 50, alignment: .trailing)
+                        TextField("Height", value: $settings.height, format: .number)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 80)
+
+                        // Quick presets
+                        Button("720p") { settings.width = 1280; settings.height = 720 }
+                            .buttonStyle(.bordered)
+                        Button("1080p") { settings.width = 1920; settings.height = 1080 }
+                            .buttonStyle(.bordered)
+                        Button("4K") { settings.width = 3840; settings.height = 2160 }
+                            .buttonStyle(.bordered)
+
+                        Spacer()
+                    }
+
+                    HStack(spacing: 12) {
+                        Text("CSS")
+                            .frame(width: 50, alignment: .trailing)
+                        TextField("Custom CSS", text: $settings.customCSS)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.system(.body, design: .monospaced))
+
+                        Button("Refresh Cache") {
+                            webViewStore.refreshCache()
+                            outputManager.captureRefreshCache()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.bottom, 8)
+
+                Divider()
+            }
+
+            // Web view (preview)
             WebRendererView(store: webViewStore, url: settings.url)
 
             Divider()
 
             // Control strip
             HStack(spacing: 16) {
-                Picker("", selection: $settings.resolution) {
-                    ForEach(Resolution.presets) { res in
-                        Text(res.label).tag(res)
-                    }
-                }
-                .labelsHidden()
-                .frame(width: 140)
-
                 Picker("", selection: $settings.fps) {
                     Text("30 fps").tag(30)
                     Text("60 fps").tag(60)
                 }
                 .labelsHidden()
                 .frame(width: 90)
+
+                Text("\(settings.width)x\(settings.height)")
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundColor(.secondary)
 
                 Spacer()
 
@@ -88,7 +136,7 @@ struct ContentView: View {
                         if outputManager.isCapturing {
                             await outputManager.stopCapture()
                         } else {
-                            await outputManager.startCapture(settings: settings, currentURL: settings.url)
+                            await outputManager.startCapture(settings: settings)
                         }
                     }
                 }

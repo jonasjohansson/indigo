@@ -23,16 +23,19 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
         streamCapture.delegate = self
     }
 
-    func startCapture(settings: AppSettings, currentURL: String) async {
-        streamCapture.captureWidth = settings.resolution.width
-        streamCapture.captureHeight = settings.resolution.height
+    func startCapture(settings: AppSettings) async {
+        streamCapture.captureWidth = settings.width
+        streamCapture.captureHeight = settings.height
         streamCapture.captureFPS = settings.fps
         streamCapture.captureAudio = settings.audioEnabled
 
-        // Create offscreen capture window at target resolution
         let cw = await MainActor.run {
-            let cw = CaptureWindow(width: settings.resolution.width, height: settings.resolution.height)
-            cw.loadURL(currentURL)
+            let cw = CaptureWindow(
+                width: settings.width,
+                height: settings.height,
+                customCSS: settings.customCSS
+            )
+            cw.loadURL(settings.url)
             return cw
         }
         self.captureWindow = cw
@@ -44,7 +47,6 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
             ndiOutput.start(name: "Indigo")
         }
 
-        // Small delay to let the window appear in the window server
         try? await Task.sleep(nanoseconds: 500_000_000)
 
         do {
@@ -82,15 +84,14 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
         }
     }
 
-    /// Forward URL changes to the capture window
     func updateCaptureURL(_ url: String) {
         captureWindow?.loadURL(url)
     }
 
-    /// Forward navigation to the capture window
     func captureGoBack() { captureWindow?.goBack() }
     func captureGoForward() { captureWindow?.goForward() }
     func captureReload() { captureWindow?.reload() }
+    func captureRefreshCache() { captureWindow?.refreshCache() }
 
     // MARK: - StreamCaptureDelegate
 
