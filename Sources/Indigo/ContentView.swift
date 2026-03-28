@@ -23,17 +23,15 @@ struct ContentView: View {
                     Image(systemName: "arrow.clockwise")
                 }
 
-                TextField("URL", text: $urlInput)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit {
-                        var trimmed = urlInput.trimmingCharacters(in: .whitespaces)
-                        if !trimmed.hasPrefix("http://") && !trimmed.hasPrefix("https://") {
-                            trimmed = "https://" + trimmed
-                            urlInput = trimmed
-                        }
-                        settings.url = trimmed
-                        webViewStore.loadURL(trimmed)
+                URLBarView(text: $urlInput) {
+                    var trimmed = urlInput.trimmingCharacters(in: .whitespaces)
+                    if !trimmed.hasPrefix("http://") && !trimmed.hasPrefix("https://") {
+                        trimmed = "https://" + trimmed
+                        urlInput = trimmed
                     }
+                    settings.url = trimmed
+                    webViewStore.loadURL(trimmed)
+                }
             }
             .padding(8)
 
