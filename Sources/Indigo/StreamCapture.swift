@@ -24,10 +24,6 @@ final class StreamCapture: NSObject, SCStreamOutput, SCStreamDelegate {
 
         let pid = ProcessInfo.processInfo.processIdentifier
 
-        guard let app = content.applications.first(where: { $0.processID == pid }) else {
-            throw CaptureError.windowNotFound
-        }
-
         guard let window = content.windows
             .filter({ $0.owningApplication?.processID == pid && $0.isOnScreen })
             .max(by: { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height })
