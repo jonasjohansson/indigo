@@ -143,11 +143,13 @@
     
     id<MTLTexture> destination = [self prepareToDrawFrameOfSize:region.size];
     
-    // When possible, use faster blit
-    if( !isFlipped && textureToPublish.pixelFormat == destination.pixelFormat
+    BOOL canBlit = textureToPublish.pixelFormat == destination.pixelFormat
        && textureToPublish.sampleCount == destination.sampleCount
-       && !textureToPublish.framebufferOnly)
+       && !textureToPublish.framebufferOnly;
+
+    if( !isFlipped && canBlit )
     {
+        // Fast blit path — no flip needed
         id<MTLBlitCommandEncoder> blitCommandEncoder = [commandBuffer blitCommandEncoder];
         blitCommandEncoder.label = @"Syphon Server Optimised Blit commandEncoder";
         [blitCommandEncoder copyFromTexture:textureToPublish
@@ -162,10 +164,48 @@
 
         [blitCommandEncoder endEncoding];
     }
-    // otherwise, re-draw the frame
+    else if( isFlipped && canBlit )
+    {
+        // Flipped blit path — copy row by row in reverse order
+        id<MTLBlitCommandEncoder> blitCommandEncoder = [commandBuffer blitCommandEncoder];
+        blitCommandEncoder.label = @"Syphon Server Flipped Blit commandEncoder";
+        NSUInteger height = (NSUInteger)region.size.height;
+        NSUInteger width = (NSUInteger)region.size.width;
+        NSUInteger srcY = (NSUInteger)region.origin.y;
+        for (NSUInteger row = 0; row < height; row++)
+        {
+            [blitCommandEncoder copyFromTexture:textureToPublish
+                                    sourceSlice:0
+                                    sourceLevel:0
+                                   sourceOrigin:MTLOriginMake(region.origin.x, srcY + row, 0)
+                                     sourceSize:MTLSizeMake(width, 1, 1)
+                                      toTexture:destination
+                               destinationSlice:0
+                               destinationLevel:0
+                              destinationOrigin:MTLOriginMake(0, height - 1 - row, 0)];
+        }
+        [blitCommandEncoder endEncoding];
+    }
+    else if( _renderer )
+    {
+        // Renderer path — handles flip + format conversion via shader
+        [_renderer renderFromTexture:textureToPublish inTexture:destination region:region onCommandBuffer:commandBuffer flip:isFlipped];
+    }
     else
     {
-        [_renderer renderFromTexture:textureToPublish inTexture:destination region:region onCommandBuffer:commandBuffer flip:isFlipped];
+        // Fallback: no renderer, can't blit — just do unflipped copy
+        id<MTLBlitCommandEncoder> blitCommandEncoder = [commandBuffer blitCommandEncoder];
+        blitCommandEncoder.label = @"Syphon Server Fallback Blit commandEncoder";
+        [blitCommandEncoder copyFromTexture:textureToPublish
+                                sourceSlice:0
+                                sourceLevel:0
+                               sourceOrigin:MTLOriginMake(region.origin.x, region.origin.y, 0)
+                                 sourceSize:MTLSizeMake(region.size.width, region.size.height, 1)
+                                  toTexture:destination
+                           destinationSlice:0
+                           destinationLevel:0
+                          destinationOrigin:MTLOriginMake(0, 0, 0)];
+        [blitCommandEncoder endEncoding];
     }
     
     [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> _Nonnull commandBuffer) {

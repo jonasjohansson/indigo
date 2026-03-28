@@ -51,7 +51,7 @@ final class SyphonOutput {
         guard let commandBuffer = commandQueue?.makeCommandBuffer() else { return }
 
         let region = NSRect(x: 0, y: 0, width: Double(texture.width), height: Double(texture.height))
-        server.publishFrameTexture(texture, on: commandBuffer, imageRegion: region, flipped: false)
+        server.publishFrameTexture(texture, on: commandBuffer, imageRegion: region, flipped: true)
         commandBuffer.commit()
     }
 }

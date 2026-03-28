@@ -1,16 +1,33 @@
 import SwiftUI
 import WebKit
 
+class WebViewStore: ObservableObject {
+    @Published var webView: WKWebView?
+
+    func loadURL(_ urlString: String) {
+        guard let url = URL(string: urlString) else { return }
+        webView?.load(URLRequest(url: url))
+    }
+
+    func goBack() { webView?.goBack() }
+    func goForward() { webView?.goForward() }
+    func reload() { webView?.reload() }
+}
+
 struct WebRendererView: NSViewRepresentable {
+    @ObservedObject var store: WebViewStore
     let url: String
-    let onWebViewReady: (WKWebView) -> Void
 
     func makeNSView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
-        onWebViewReady(webView)
+
+        DispatchQueue.main.async {
+            store.webView = webView
+        }
+
         if let url = URL(string: url) {
             webView.load(URLRequest(url: url))
         }
@@ -19,10 +36,11 @@ struct WebRendererView: NSViewRepresentable {
     }
 
     func updateNSView(_ webView: WKWebView, context: Context) {
-        guard let url = URL(string: url) else { return }
-        if context.coordinator.lastLoadedURL != self.url {
-            context.coordinator.lastLoadedURL = self.url
-            webView.load(URLRequest(url: url))
+        if context.coordinator.lastLoadedURL != url {
+            context.coordinator.lastLoadedURL = url
+            if let parsed = URL(string: url) {
+                webView.load(URLRequest(url: parsed))
+            }
         }
     }
 

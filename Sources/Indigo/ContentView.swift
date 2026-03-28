@@ -3,50 +3,46 @@ import WebKit
 
 struct ContentView: View {
     @StateObject private var settings = AppSettings()
+    @StateObject private var webViewStore = WebViewStore()
     @ObservedObject var outputManager: OutputManager
     @State private var urlInput: String = ""
-    @State private var webView: WKWebView?
 
     var body: some View {
         VStack(spacing: 0) {
             // Navigation bar
             HStack(spacing: 8) {
-                Button(action: { webView?.goBack() }) {
+                Button(action: { webViewStore.goBack() }) {
                     Image(systemName: "chevron.left")
                 }
-                .disabled(!(webView?.canGoBack ?? false))
 
-                Button(action: { webView?.goForward() }) {
+                Button(action: { webViewStore.goForward() }) {
                     Image(systemName: "chevron.right")
                 }
-                .disabled(!(webView?.canGoForward ?? false))
 
-                Button(action: { webView?.reload() }) {
+                Button(action: { webViewStore.reload() }) {
                     Image(systemName: "arrow.clockwise")
                 }
 
                 TextField("URL", text: $urlInput)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit {
-                        let trimmed = urlInput.trimmingCharacters(in: .whitespaces)
+                        var trimmed = urlInput.trimmingCharacters(in: .whitespaces)
                         if !trimmed.hasPrefix("http://") && !trimmed.hasPrefix("https://") {
-                            urlInput = "https://" + trimmed
+                            trimmed = "https://" + trimmed
+                            urlInput = trimmed
                         }
-                        settings.url = urlInput
+                        settings.url = trimmed
                     }
             }
             .padding(8)
 
             // Web view
-            WebRendererView(url: settings.url) { wv in
-                self.webView = wv
-            }
+            WebRendererView(store: webViewStore, url: settings.url)
 
             Divider()
 
             // Control strip
             HStack(spacing: 16) {
-                // Resolution picker
                 Picker("", selection: $settings.resolution) {
                     ForEach(Resolution.presets) { res in
                         Text(res.label).tag(res)
@@ -55,7 +51,6 @@ struct ContentView: View {
                 .labelsHidden()
                 .frame(width: 140)
 
-                // FPS picker
                 Picker("", selection: $settings.fps) {
                     Text("30 fps").tag(30)
                     Text("60 fps").tag(60)
@@ -65,7 +60,6 @@ struct ContentView: View {
 
                 Spacer()
 
-                // Output toggles
                 Toggle("Syphon", isOn: $settings.syphonEnabled)
                     .toggleStyle(.switch)
                     .disabled(outputManager.isCapturing)
@@ -80,7 +74,6 @@ struct ContentView: View {
 
                 Spacer()
 
-                // Start/Stop button
                 Button(outputManager.isCapturing ? "Stop" : "Start") {
                     Task {
                         if outputManager.isCapturing {
@@ -95,7 +88,6 @@ struct ContentView: View {
             }
             .padding(8)
 
-            // Error display
             if let error = outputManager.error {
                 Text(error)
                     .foregroundColor(.red)
