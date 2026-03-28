@@ -16,6 +16,8 @@ final class StreamCapture: NSObject, SCStreamOutput, SCStreamDelegate {
     var captureHeight: Int = 1080
     var captureFPS: Int = 60
     var captureAudio: Bool = true
+    /// Region of the window to capture (in window coordinates). If zero, captures entire window.
+    var sourceRect: CGRect = .zero
 
     func startCapture() async throws {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
@@ -28,7 +30,7 @@ final class StreamCapture: NSObject, SCStreamOutput, SCStreamDelegate {
             throw CaptureError.windowNotFound
         }
 
-        NSLog("StreamCapture: capturing [%d] '%@'", window.windowID, window.title ?? "")
+        NSLog("StreamCapture: window [%d] frame=%@", window.windowID, NSStringFromRect(window.frame))
 
         let filter = SCContentFilter(desktopIndependentWindow: window)
 
@@ -42,6 +44,14 @@ final class StreamCapture: NSObject, SCStreamOutput, SCStreamDelegate {
         config.sampleRate = 48000
         config.channelCount = 2
 
+        // Crop to just the web view area if sourceRect is set
+        if sourceRect != .zero {
+            config.sourceRect = sourceRect
+            config.destinationRect = CGRect(x: 0, y: 0, width: captureWidth, height: captureHeight)
+            NSLog("StreamCapture: sourceRect=%@, output=%dx%d",
+                  NSStringFromRect(sourceRect), captureWidth, captureHeight)
+        }
+
         let stream = SCStream(filter: filter, configuration: config, delegate: self)
 
         try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: .global(qos: .userInteractive))
@@ -51,7 +61,7 @@ final class StreamCapture: NSObject, SCStreamOutput, SCStreamDelegate {
 
         try await stream.startCapture()
         self.stream = stream
-        NSLog("StreamCapture: started OK")
+        NSLog("StreamCapture: started OK (%dx%d @ %dfps)", captureWidth, captureHeight, captureFPS)
     }
 
     func stopCapture() async throws {

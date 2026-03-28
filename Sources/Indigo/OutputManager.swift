@@ -15,6 +15,9 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
     @Published var isCapturing = false
     @Published var error: String?
 
+    /// The web view's frame in global (screen) coordinates, set by ContentView
+    var webViewFrame: CGRect = .zero
+
     init() {
         guard let device = MTLCreateSystemDefaultDevice() else {
             fatalError("Metal is not available on this system")
@@ -32,6 +35,34 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
         streamCapture.captureHeight = settings.height
         streamCapture.captureFPS = settings.fps
         streamCapture.captureAudio = settings.audioEnabled
+
+        // Convert the web view's screen frame to window-local coordinates for sourceRect
+        if let window = await MainActor.run(body: { NSApp.mainWindow }) {
+            let windowFrame = window.frame
+            let contentFrame = window.contentLayoutRect
+            let titleBarHeight = windowFrame.height - contentFrame.height
+
+            // webViewFrame is in global (screen) coords from GeometryReader
+            // Convert to window-local coords (origin at top-left of window content area)
+            let screenFrame = await MainActor.run { self.webViewFrame }
+
+            if screenFrame != .zero {
+                // ScreenCaptureKit uses top-left origin within the window
+                let localX = screenFrame.origin.x - windowFrame.origin.x
+                // Screen coords: bottom-left origin. Window content: below title bar.
+                let localY = (windowFrame.origin.y + windowFrame.height) - (screenFrame.origin.y + screenFrame.height)
+
+                let scaleFactor = await MainActor.run { window.backingScaleFactor }
+                let rect = CGRect(
+                    x: localX * scaleFactor,
+                    y: localY * scaleFactor,
+                    width: screenFrame.width * scaleFactor,
+                    height: screenFrame.height * scaleFactor
+                )
+                streamCapture.sourceRect = rect
+                NSLog("OutputManager: webView sourceRect=%@", NSStringFromRect(rect))
+            }
+        }
 
         if settings.syphonEnabled {
             syphonOutput.start(name: "Indigo")
@@ -61,8 +92,6 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
     func stopCapture() async {
         guard isCapturing && !isStopping else { return }
         isStopping = true
-
-        // Stop receiving frames first
         streamCapture.delegate = nil
 
         do {
@@ -74,8 +103,7 @@ final class OutputManager: ObservableObject, StreamCaptureDelegate {
         syphonOutput.stop()
         ndiOutput.stop()
         frameCount = 0
-
-        // Re-attach delegate for next session
+        streamCapture.sourceRect = .zero
         streamCapture.delegate = self
 
         await MainActor.run {
