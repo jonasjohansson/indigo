@@ -1,0 +1,5 @@
+module CNDI [system] {
+    header "cndi.h"
+    link "ndi"
+    export *
+}

@@ -1,0 +1,13 @@
+# Claude Code
+.claude/
+
+# macOS
+.build/
+.swiftpm/
+Indigo.app/
+*.zip
+
+# Windows
+windows/**/bin/
+windows/**/obj/
+indigo-windows/
