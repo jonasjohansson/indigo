@@ -11,3 +11,4 @@ Indigo.app/
 windows/**/bin/
 windows/**/obj/
 indigo-windows/
+.DS_Store
