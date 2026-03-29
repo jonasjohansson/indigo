@@ -94,7 +94,6 @@ WebView2 → Windows.Graphics.Capture (crop + GPU scale)
 
 - **Process-specific audio** (Windows) — currently captures all system audio via WASAPI loopback; should isolate WebView2 process audio only (WASAPI process loopback, Windows 10 2004+)
 - **Frame rate throttling** — capture runs at monitor refresh rate; should drop/skip frames to match the configured 30/60fps setting
-- **macOS build paths** — Package.swift needs updating after repo restructure (Sources/ → macos/Sources/)
 - **Spout stability** — P/Invoke uses C++ mangled names from prebuilt SpoutDX.dll; consider building a thin C wrapper for version resilience
 - **Transparent background** — pass through alpha channel for overlay compositing
 - **Multiple sources** — support multiple URLs/tabs as separate outputs
