@@ -1,87 +1,98 @@
 # Indigo
 
-Native macOS app that turns any website into a Syphon + NDI video/audio source. Built for Resolume Arena and other VJ software.
+Turn any website into a live video/audio source for VJ and video production software.
 
-Load a URL, click Start, and the web content appears as a source in Resolume — with audio over NDI.
+Load a URL, click Start, and the web content appears as a source in Resolume Arena, OBS, or any Syphon/Spout/NDI receiver — with audio over NDI.
+
+Available for **macOS** and **Windows**.
 
 ## Features
 
-- **Syphon output** — zero-copy GPU texture sharing via IOSurface
+- **GPU texture sharing** — Syphon (macOS) / Spout (Windows)
 - **NDI output** — video + audio over the network
 - **Viewport-only capture** — only the web content is sent, no app UI
 - **Custom resolution** — 720p, 1080p, 4K, or any custom width/height
 - **Custom CSS** — inject CSS to hide elements, change backgrounds, etc.
-- **Audio capture** — web page audio sent over NDI (macOS 15+ requires Screen & System Audio Recording permission)
+- **Audio capture** — web page audio sent over NDI
 - **Settings persistence** — URL, resolution, CSS, and toggles remembered across sessions
 - **Interactive** — browse, click, scroll the page while outputting
+- **Aspect ratio lock** — window resize locked to output ratio while capturing
 
-## Requirements
+## Project Structure
 
-- macOS 13.0+ (Ventura or later)
-- [NDI SDK for Apple](https://ndi.video/sdk/) installed at `/Library/NDI SDK for Apple/`
-- Xcode (for building)
-- Screen Recording permission (prompted on first launch)
-
-## Build
-
-```bash
-bash build-app.sh
+```
+indigo/
+├── macos/          macOS app (Swift / SwiftUI)
+├── windows/        Windows app (C# / WPF / .NET 8)
+├── assets/         Shared icons (icns, ico, png)
+├── docs/           Design docs and plans
+└── README.md
 ```
 
-This builds a release binary and packages it as `Indigo.app` with the NDI dylib embedded.
+## macOS
 
-## Run
+### Requirements
+- macOS 13.0+ (Ventura or later)
+- [NDI SDK for Apple](https://ndi.video/sdk/) at `/Library/NDI SDK for Apple/`
+- Xcode
+- Screen Recording + System Audio Recording permissions
 
+### Build & Run
 ```bash
-# From terminal (shows debug logs):
-Indigo.app/Contents/MacOS/Indigo
+cd macos
+bash build-app.sh
+open Indigo.app
+```
 
-# Or double-click Indigo.app in Finder
+### Architecture
+```
+WKWebView → ScreenCaptureKit (sourceRect crop + scaling)
+├→ Syphon (IOSurface → Metal → SyphonMetalServer)
+├→ NDI video (CVPixelBuffer → BGRA)
+└→ NDI audio (float32 deinterleave → planar)
+```
+
+## Windows
+
+### Requirements
+- Windows 10 1903+ / Windows 11
+- .NET 8 SDK
+- [NDI Runtime](https://ndi.video/tools/)
+- WebView2 Runtime (pre-installed on Windows 11)
+
+### Build & Run
+```bash
+cd windows
+dotnet run --project IndigoWindows
+```
+
+Or build a release:
+```powershell
+cd windows
+pwsh build.ps1
+./publish/Indigo.exe
+```
+
+### Architecture
+```
+WebView2 → Windows.Graphics.Capture (crop + GPU scale)
+├→ Spout (DirectX 11 shared texture via SpoutDX)
+├→ NDI video (staging texture readback → BGRA)
+└→ NDI audio (WASAPI loopback → float32 deinterleave → planar)
 ```
 
 ## Usage
 
 1. Launch Indigo
-2. Enter a URL in the address bar and press Enter
-3. Configure resolution and FPS in the settings panel (gear icon)
-4. Toggle Syphon/NDI/Audio outputs as needed
+2. Enter a URL and press Enter
+3. Configure resolution and FPS (gear icon)
+4. Toggle outputs (Syphon/Spout, NDI, Audio)
 5. Click **Start**
-6. The web content appears as "Indigo" in Resolume's Syphon/NDI source list
+6. Web content appears as "Indigo" in your VJ software
 
-## Architecture
+## Design
 
-```
-WKWebView (renders page)
-    |
-    +-- Video stream (ScreenCaptureKit, window filter + sourceRect crop)
-    |   +-> Syphon (IOSurface -> MTLTexture -> SyphonMetalServer)
-    |   +-> NDI (CVPixelBuffer -> NDIlib_send_send_video_v2)
-    |
-    +-- Audio stream (ScreenCaptureKit, display filter for child process audio)
-        +-> NDI (float32 deinterleave -> NDIlib_send_send_audio_v2)
-```
-
-Two ScreenCaptureKit streams run in parallel:
-- **Video**: captures the app window with `sourceRect` cropping to exclude UI chrome, scaled to the configured output resolution
-- **Audio**: uses a display filter scoped to the app to capture WKWebView's child process (WebContent) audio
-
-## Dependencies
-
-| Dependency | Purpose | Integration |
-|---|---|---|
-| [Syphon Framework](https://github.com/Syphon/Syphon-Framework) | GPU texture sharing | Vendored as CSyphon SPM target |
-| [NDI SDK](https://ndi.video/sdk/) | Network video/audio | System install + bridging header |
-| WebKit | Web rendering | System framework |
-| Metal | GPU textures | System framework |
-| ScreenCaptureKit | Window/audio capture | System framework |
-
-## Permissions
-
-On macOS 15 (Sequoia), Apple split screen recording into two separate permissions:
-- **Screen Recording** — required for video capture
-- **System Audio Recording** — required for audio capture
-
-Grant both in **System Settings -> Privacy & Security -> Screen & System Audio Recording**.
+See [docs/DESIGN.md](docs/DESIGN.md) for the cross-platform design document.
 
 ## License
 

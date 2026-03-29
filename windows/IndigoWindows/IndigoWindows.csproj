@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>..\..\assets\AppIcon.ico</ApplicationIcon>
+    <AssemblyTitle>Indigo</AssemblyTitle>
   </PropertyGroup>
 
   <ItemGroup>

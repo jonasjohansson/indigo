@@ -1,9 +1,10 @@
+# macOS
 .build/
 .swiftpm/
 Indigo.app/
 *.zip
 
-# Windows project
-indigo-windows/**/bin/
-indigo-windows/**/obj/
-indigo-windows/libs/Spout2-master/
+# Windows
+windows/**/bin/
+windows/**/obj/
+indigo-windows/
