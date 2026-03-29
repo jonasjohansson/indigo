@@ -1,0 +1,197 @@
+<Window x:Class="IndigoWindows.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        mc:Ignorable="d"
+        Title="Indigo" Width="800" Height="600"
+        MinWidth="640" MinHeight="480"
+        Background="#1E1E1E">
+
+    <Window.Resources>
+        <!-- Base button style -->
+        <Style x:Key="NavButton" TargetType="Button">
+            <Setter Property="Background" Value="#2D2D2D"/>
+            <Setter Property="Foreground" Value="#CCCCCC"/>
+            <Setter Property="BorderBrush" Value="#3C3C3C"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#3C3C3C"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="#4C4C4C"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Dark TextBox style -->
+        <Style x:Key="DarkTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#3C3C3C"/>
+            <Setter Property="Foreground" Value="#CCCCCC"/>
+            <Setter Property="BorderBrush" Value="#555555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="4,3"/>
+            <Setter Property="CaretBrush" Value="#CCCCCC"/>
+        </Style>
+
+        <!-- Toggle button style -->
+        <Style x:Key="DarkToggleButton" TargetType="ToggleButton">
+            <Setter Property="Background" Value="#2D2D2D"/>
+            <Setter Property="Foreground" Value="#CCCCCC"/>
+            <Setter Property="BorderBrush" Value="#3C3C3C"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#0078D4"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#3C3C3C"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsChecked" Value="True"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="border" Property="Background" Value="#1A8AD4"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ComboBox style -->
+        <Style x:Key="DarkComboBox" TargetType="ComboBox">
+            <Setter Property="Background" Value="#3C3C3C"/>
+            <Setter Property="Foreground" Value="#CCCCCC"/>
+            <Setter Property="BorderBrush" Value="#555555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="4,3"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Nav bar -->
+            <RowDefinition Height="Auto"/>  <!-- Settings panel -->
+            <RowDefinition Height="*"/>     <!-- WebView -->
+            <RowDefinition Height="Auto"/>  <!-- Control strip -->
+        </Grid.RowDefinitions>
+
+        <!-- Navigation Bar -->
+        <DockPanel Grid.Row="0" Background="#252526" LastChildFill="True">
+            <Button Content="&#9664;" Style="{StaticResource NavButton}" DockPanel.Dock="Left"
+                    Click="BackButton_Click" Margin="4,4,2,4" ToolTip="Back"/>
+            <Button Content="&#9654;" Style="{StaticResource NavButton}" DockPanel.Dock="Left"
+                    Click="ForwardButton_Click" Margin="2,4,2,4" ToolTip="Forward"/>
+            <Button Content="&#10227;" Style="{StaticResource NavButton}" DockPanel.Dock="Left"
+                    Click="ReloadButton_Click" Margin="2,4,2,4" ToolTip="Reload"/>
+            <ToggleButton x:Name="SettingsToggle" Content="&#9881;" Style="{StaticResource DarkToggleButton}"
+                          DockPanel.Dock="Right" Click="SettingsToggle_Click" Margin="2,4,4,4" ToolTip="Settings"/>
+            <TextBox x:Name="UrlBar" Style="{StaticResource DarkTextBox}"
+                     Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}"
+                     KeyDown="UrlBar_KeyDown" Margin="2,4,2,4" VerticalContentAlignment="Center"/>
+        </DockPanel>
+
+        <!-- Collapsible Settings Panel -->
+        <Border x:Name="SettingsPanel" Grid.Row="1" Background="#2D2D2D" Visibility="Collapsed"
+                BorderBrush="#3C3C3C" BorderThickness="0,0,0,1" Padding="8">
+            <StackPanel>
+                <!-- Resolution row -->
+                <DockPanel Margin="0,0,0,6">
+                    <TextBlock Text="Width:" Foreground="#CCCCCC" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBox x:Name="WidthBox" Style="{StaticResource DarkTextBox}" Width="70"
+                             Text="{Binding Width, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0"/>
+                    <TextBlock Text="Height:" Foreground="#CCCCCC" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <TextBox x:Name="HeightBox" Style="{StaticResource DarkTextBox}" Width="70"
+                             Text="{Binding Height, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,8,0"/>
+                    <Button Content="720p" Style="{StaticResource NavButton}" Click="Preset720_Click" Margin="0,0,4,0"/>
+                    <Button Content="1080p" Style="{StaticResource NavButton}" Click="Preset1080_Click" Margin="0,0,4,0"/>
+                    <Button Content="4K" Style="{StaticResource NavButton}" Click="Preset4K_Click" Margin="0,0,0,0"/>
+                </DockPanel>
+
+                <!-- CSS row -->
+                <DockPanel Margin="0,0,0,6">
+                    <TextBlock Text="CSS:" Foreground="#CCCCCC" VerticalAlignment="Center" DockPanel.Dock="Left" Margin="0,0,4,0"/>
+                    <TextBox Style="{StaticResource DarkTextBox}"
+                             Text="{Binding CustomCSS, UpdateSourceTrigger=PropertyChanged}"/>
+                </DockPanel>
+
+                <!-- Clear cache -->
+                <Button Content="Clear Cache" Style="{StaticResource NavButton}" Click="ClearCache_Click"
+                        HorizontalAlignment="Left"/>
+            </StackPanel>
+        </Border>
+
+        <!-- WebView2 -->
+        <wv2:WebView2 x:Name="WebView" Grid.Row="2"/>
+
+        <!-- Control Strip -->
+        <DockPanel Grid.Row="3" Background="#252526" LastChildFill="False">
+            <!-- FPS picker -->
+            <ComboBox x:Name="FpsPicker" Style="{StaticResource DarkComboBox}" DockPanel.Dock="Left"
+                      Margin="4" SelectionChanged="FpsPicker_SelectionChanged">
+                <ComboBoxItem Content="30 fps" Tag="30"/>
+                <ComboBoxItem Content="60 fps" Tag="60"/>
+            </ComboBox>
+
+            <!-- Resolution label -->
+            <TextBlock x:Name="ResolutionLabel" Text="1920 x 1080" Foreground="#CCCCCC"
+                       FontFamily="Consolas" VerticalAlignment="Center" DockPanel.Dock="Left" Margin="8,4"/>
+
+            <!-- Right-side controls -->
+            <Button x:Name="StartStopButton" Content="Start" DockPanel.Dock="Right"
+                    Background="#2EA043" Foreground="White" FontWeight="Bold"
+                    Padding="12,4" Margin="4" Click="StartStop_Click" Cursor="Hand">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+
+            <TextBlock x:Name="StatusText" Text="Idle" Foreground="#888888"
+                       VerticalAlignment="Center" DockPanel.Dock="Right" Margin="8,4"/>
+
+            <ToggleButton Content="Audio" Style="{StaticResource DarkToggleButton}" DockPanel.Dock="Right"
+                          IsChecked="{Binding AudioEnabled}" Margin="2,4"/>
+            <ToggleButton Content="NDI" Style="{StaticResource DarkToggleButton}" DockPanel.Dock="Right"
+                          IsChecked="{Binding NdiEnabled}" Margin="2,4"/>
+            <ToggleButton Content="Spout" Style="{StaticResource DarkToggleButton}" DockPanel.Dock="Right"
+                          IsChecked="{Binding SpoutEnabled}" Margin="2,4"/>
+        </DockPanel>
+    </Grid>
+</Window>
