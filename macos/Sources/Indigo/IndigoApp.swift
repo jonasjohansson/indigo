@@ -8,6 +8,7 @@ struct IndigoApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView(outputManager: appDelegate.outputManager)
+                .preferredColorScheme(.dark)
                 .onAppear {
                     requestScreenCapturePermission()
                 }

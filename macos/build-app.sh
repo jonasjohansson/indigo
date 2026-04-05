@@ -69,5 +69,7 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << 'PLIST'
 </plist>
 PLIST
 
-echo "Done! App bundle created at: $(pwd)/$APP_BUNDLE"
-echo "Run with: open $APP_BUNDLE"
+echo "Installing to /Applications..."
+cp -R "$APP_BUNDLE" /Applications/
+
+echo "Done! Installed at /Applications/$APP_BUNDLE"
